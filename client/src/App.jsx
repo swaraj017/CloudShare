@@ -1,7 +1,7 @@
 
 import React from 'react'
 import LandPage from './components/LandPage.jsx'
-import Home from './components/home'
+import Home from './components/Home.jsx'
 import Login from './components/AuthPages/Login'
 import Register from './components/AuthPages/Register'
 import Settings from './components/sideBar/Settings'
