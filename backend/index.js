@@ -12,11 +12,8 @@ const app = express();
 app.use(express.json());
 
 
-<<<<<<< HEAD
 //http://localhost:5173
 
-=======
->>>>>>> 24a72810d57d7f23e315bdde1ba3cebc253a579f
 app.use(cors({
   origin: "https://cloud-share-sys.vercel.app",
   credentials: true
