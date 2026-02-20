@@ -2,7 +2,7 @@ import axios from "axios";
 
 //http://localhost:5000/api 
 const API = axios.create({
-  baseURL: "https://cloudshare-backend-4d97.onrender.com",
+  baseURL: "https://cloudshare-backend-4d97.onrender.com/api",
 });
 
  
