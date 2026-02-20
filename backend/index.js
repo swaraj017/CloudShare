@@ -11,8 +11,11 @@ import apiKey from "./src/routes/apiKey.js";
 const app = express();
 app.use(express.json());
 
+
+//http://localhost:5173
+
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://cloud-share-sys.vercel.app",
   credentials: true
 }));
 const PORT = process.env.PORT || 4000;

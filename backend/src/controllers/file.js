@@ -6,44 +6,100 @@ import { authorizeB2 } from "../connections/storageCon.js";
 import File from "../models/file.js";
 import User from "../models/user.js";
 
-export const getUploadUrl = async (req, res) => {
-  try {
-    const { fileSize, originalName } = req.body;
+// export const getUploadUrl = async (req, res) => {
+//   try {
+//     const { fileSize, originalName } = req.body;
 
-    if (!fileSize || !originalName)
-      return res.status(400).json({ message: "Invalid request" });
+//     if (!fileSize || !originalName)
+//       return res.status(400).json({ message: "Invalid request" });
+
+//     const user = await User.findById(req.user.id);
+//     if (!user) return res.status(401).json({ message: "User not found" });
+
+//     if (user.creditsUsed + fileSize > user.creditLimit) {
+//       return res.status(403).json({
+//         message: "Credit limit exceeded",
+//         remaining: Math.max(0, user.creditLimit - user.creditsUsed),
+//       });
+//     }
+
+//     const B2 = await authorizeB2();
+//     const { data } = await B2.getUploadUrl({
+//       bucketId: process.env.B2_BUCKET_ID,
+//     });
+
+//     // 🔥 INCLUDE extension + folder
+//     const extension = originalName.split(".").pop();
+//     const uniqueName = `filestoresys/${nanoid(16)}.${extension}`;
+
+//     res.json({
+//       uploadUrl: data.uploadUrl,
+//       authorizationToken: data.authorizationToken,
+//       fileName: uniqueName,
+//     });
+
+//   } catch (err) {
+//     console.error("getUploadUrl error:", err);
+//     res.status(500).json({ message: "Failed to get upload URL" });
+//   }
+// };
+
+export const uploadFile = async (req, res) => {
+  try {
+    const { isPublic = false } = req.body;
+    const file = req.file; // using multer
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    if (user.creditsUsed + fileSize > user.creditLimit) {
-      return res.status(403).json({
-        message: "Credit limit exceeded",
-        remaining: Math.max(0, user.creditLimit - user.creditsUsed),
-      });
+    if (user.creditsUsed + file.size > user.creditLimit) {
+      return res.status(403).json({ message: "Credit limit exceeded" });
     }
 
     const B2 = await authorizeB2();
+
     const { data } = await B2.getUploadUrl({
       bucketId: process.env.B2_BUCKET_ID,
     });
 
-    // 🔥 INCLUDE extension + folder
-    const extension = originalName.split(".").pop();
+    const extension = file.originalname.split(".").pop();
     const uniqueName = `filestoresys/${nanoid(16)}.${extension}`;
 
-    res.json({
+    const uploadResponse = await B2.uploadFile({
       uploadUrl: data.uploadUrl,
-      authorizationToken: data.authorizationToken,
+      uploadAuthToken: data.authorizationToken,
       fileName: uniqueName,
+      data: file.buffer,
     });
 
+    const storageUrl = `${process.env.B2_DOWNLOAD_URL}/file/${process.env.B2_BUCKET_NAME}/${uniqueName}`;
+
+    const savedFile = await File.create({
+      owner: req.user.id,
+      filename: uniqueName,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      b2FileId: uploadResponse.data.fileId,
+      storageUrl,
+      access: isPublic ? "public" : "private",
+    });
+
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { creditsUsed: file.size },
+    });
+
+    res.status(201).json({ message: "Uploaded successfully", file: savedFile });
+
   } catch (err) {
-    console.error("getUploadUrl error:", err);
-    res.status(500).json({ message: "Failed to get upload URL" });
+    console.error(err);
+    res.status(500).json({ message: "Upload failed" });
   }
 };
-
 export const saveFileMeta = async (req, res) => {
   try {
     const { fileName, originalName, mimeType, fileId, fileSize, isPublic = false } = req.body;

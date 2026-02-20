@@ -1,11 +1,15 @@
 import { Router } from "express";
-import { getUploadUrl, saveFileMeta ,getMyFiles ,downloadFile, toggleFileAccess, deleteFile, getPublicFileInfo, downloadPublicFile} from "../controllers/file.js";
+import { uploadFile, saveFileMeta ,getMyFiles ,downloadFile, toggleFileAccess, deleteFile, getPublicFileInfo, downloadPublicFile} from "../controllers/file.js";
 import { auth } from "../middleware/auth.js";
 
 const router = Router();
 
 
-router.post("/upload-url", auth, getUploadUrl);
+import multer from "multer";
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post("/upload", auth, upload.single("file"), uploadFile);
 router.post("/metadata", auth, saveFileMeta);
 router.get("/my-files", auth, getMyFiles);
 router.get("/download/:id", auth, downloadFile);

@@ -170,10 +170,6 @@ await uploadFile(file, {
       </section>
 
       
-
-
-  
-
       {/* Security */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-white">Security</h2>
