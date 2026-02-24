@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+ import React, { useEffect, useState } from "react";
 import { Heading, Dialog, Button, Flex, Box } from "@radix-ui/themes";
 import { Search } from "lucide-react";
 import { getMyFiles } from "./sideBarApis/getFile";
@@ -9,9 +9,20 @@ const Myfiles = () => {
   const [allFiles, setAllFiles] = useState([]);
   const [files, setFiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const fetchFiles = async () => {
+  try {
+    const data = await getMyFiles();
+    setAllFiles(data);
+    setOpen(false);  
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   useEffect(() => {
-    getMyFiles().then(setAllFiles).catch(console.error);
+    fetchFiles();
   }, []);
 
   useEffect(() => {
@@ -25,13 +36,13 @@ const Myfiles = () => {
     <Box style={{ width: "100%" }}>
       <Flex justify="between" align="center" mb="3">
         <Heading size="5">Recent Uploads</Heading>
-        <Dialog.Root>
+        <Dialog.Root open={open} onOpenChange={setOpen}>
           <Dialog.Trigger>
             <Button size="2">Upload</Button>
           </Dialog.Trigger>
           <Dialog.Content maxWidth="420px">
             <Dialog.Title>Upload File</Dialog.Title>
-            <Upload />
+            <Upload onUploadComplete={fetchFiles} />
           </Dialog.Content>
         </Dialog.Root>
       </Flex>

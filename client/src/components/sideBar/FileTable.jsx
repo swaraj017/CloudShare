@@ -1,199 +1,194 @@
-import React, { useState, useEffect } from "react";
-import { Download, Copy, Lock, Unlock, Trash2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Download, Share, Lock, Unlock, Trash2 } from "lucide-react";
 import { downloadFile } from "./sideBarApis/getFile";
 import { toggleFileAccess } from "./sideBarApis/toggleFileAccess";
 import { deleteFile } from "./sideBarApis/deleteFile";
-import FileCard from "./FileCard.jsx";
 
 const FileTable = ({ files }) => {
-  const [filesList, setFilesList] = useState(files || []);
-  const [downloadingId, setDownloadingId] = useState(null);
-  const [loadingId, setLoadingId] = useState(null);
+  const [list, setList] = useState(files || []);
+  const [selected, setSelected] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [toggledId, setToggledId] = useState(null);
 
   useEffect(() => {
-    setFilesList(files || []);
+    setList(files || []);
+    setSelected([]);
   }, [files]);
+ 
 
-  const handleDownload = async file => {
-    setDownloadingId(file._id);
-    try {
-      await downloadFile(file);
-    } catch {
-      alert("Failed to download file");
-    } finally {
-      setDownloadingId(null);
-    }
+  const toggleOne = (id) =>
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+
+  const toggleAll = () =>
+    setSelected(
+      selected.length === list.length ? [] : list.map((f) => f._id)
+    );
+
+  const bulkDelete = async () => {
+    await Promise.all(selected.map(deleteFile));
+    setList(list.filter((f) => !selected.includes(f._id)));
+    setSelected([]);
+  };
+ 
+
+  const removeOne = async (file) => {
+    await deleteFile(file._id);
+    setList(list.filter((f) => f._id !== file._id));
   };
 
-  const handleToggleAccess = async file => {
-    setLoadingId(file._id);
-    try {
-      const updated = await toggleFileAccess(file._id, file.access !== "public");
-      setFilesList(filesList.map(f => f._id === file._id ? updated : f));
-    } catch {
-      alert("Failed to toggle file access");
-    } finally {
-      setLoadingId(null);
-    }
+  const toggleAccess = async (file) => {
+    const updated = await toggleFileAccess(
+      file._id,
+      file.access !== "public"
+    );
+
+    setList(list.map((f) => (f._id === file._id ? updated : f)));
+
+    setToggledId(file._id);
+    setTimeout(() => setToggledId(null), 400);
   };
 
-  const copyPublicUrl = (fileId, link) => {
-    if (!link) return;
-    navigator.clipboard.writeText(link);
-    setCopiedId(fileId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleDeleteFile = async (file) => {
-    setDeletingId(file._id);
-    try {
-      await deleteFile(file._id);
-      setFilesList(filesList.filter(f => f._id !== file._id));
-      setDeleteConfirm(null);
-    } catch {
-      alert("Failed to delete file");
-    } finally {
-      setDeletingId(null);
-    }
+  const copyLink = (file) => {
+    navigator.clipboard.writeText(file.publicLink);
+    setCopiedId(file._id);
+    setTimeout(() => setCopiedId(null), 800);
   };
 
   return (
-    <>
-      <div className="bg-gray-900 rounded-xl p-5 shadow-[0_0_40px_rgba(0,255,170,0.03)]">
+    <div className="bg-gray-900 rounded-xl p-5">
 
-        {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[750px] border-collapse">
-            <thead className="text-gray-400 text-left">
-              <tr>
-                <th className="pb-3">Name</th>
-                <th className="pb-3">Access</th>
-                <th className="pb-3">Type</th>
-                <th className="pb-3">Uploaded</th>
-                <th className="pb-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filesList.length ? filesList.map(file => (
-                <tr key={file._id} className="border-t border-gray-800">
-                  <td className="py-3 max-w-[200px] truncate">{file.originalName}</td>
-                  <td>
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${
-                      file.access === "public"
-                        ? "bg-teal-100 text-teal-500"
-                        : "bg-gray-700 text-gray-400"
-                    }`}>
-                      {file.access === "public" ? <Unlock size={14} /> : <Lock size={14} />}
-                      {file.access}
-                    </span>
+      {/* Bulk Bar */}
+      {selected.length > 0 && (
+        <div className="mb-4 flex justify-between items-center">
+          <span className="text-sm text-gray-400">
+            {selected.length} selected
+          </span>
+          <button
+            onClick={bulkDelete}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm transition"
+          >
+            Delete Selected
+          </button>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[750px] border-collapse text-sm">
+          <thead className="text-gray-400 text-left">
+            <tr>
+              <th className="pb-3">
+                <input
+                  type="checkbox"
+                  checked={
+                    selected.length === list.length && list.length > 0
+                  }
+                  onChange={toggleAll}
+                />
+              </th>
+              <th className="pb-3">Name</th>
+              <th className="pb-3">Access</th>
+              <th className="pb-3">Type</th>
+              <th className="pb-3">Uploaded</th>
+              <th className="pb-3 text-right">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {list.length ? (
+              list.map((file) => (
+                <tr
+                  key={file._id}
+                  className="border-t border-gray-800 hover:bg-gray-800/40 transition"
+                >
+                  <td className="py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(file._id)}
+                      onChange={() => toggleOne(file._id)}
+                    />
                   </td>
-                  <td>{file.originalName.split(".").pop().toUpperCase()}</td>
-                  <td>{new Date(file.createdAt).toLocaleDateString()}</td>
-                  <td className="text-right">
+
+                  <td className="py-3 max-w-[200px] truncate">
+                    {file.originalName}
+                  </td>
+
+                  <td className="py-3">
+                    <button
+                      onClick={() => toggleAccess(file)}
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all duration-200 
+                      ${
+                        toggledId === file._id
+                          ? "bg-green-600 scale-105"
+                          : file.access === "public"
+                          ? "bg-teal-600/20 text-teal-400 hover:bg-teal-600/30 hover:scale-105"
+                          : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:scale-105"
+                      }`}
+                    >
+                      {file.access === "public" ? (
+                        <Unlock size={14} />
+                      ) : (
+                        <Lock size={14} />
+                      )}
+                      {file.access}
+                    </button>
+                  </td>
+
+                  <td className="py-3">
+                    {file.originalName.split(".").pop().toUpperCase()}
+                  </td>
+
+                  <td className="py-3">
+                    {new Date(file.createdAt).toLocaleDateString()}
+                  </td>
+
+                  <td className="py-3 text-right">
                     <div className="flex gap-2 justify-end">
-                      <button
-                        onClick={() => handleToggleAccess(file)}
-                        disabled={loadingId === file._id}
-                        className="px-3 py-2 rounded bg-gray-800 hover:bg-gray-700"
-                      >
-                        {file.access === "public" ? <Lock size={16} /> : <Unlock size={16} />}
-                      </button>
 
                       {file.access === "public" && file.publicLink && (
                         <button
-                          onClick={() => copyPublicUrl(file._id, file.publicLink)}
-                          className={`px-3 py-2 rounded bg-gray-800 hover:bg-gray-700 ${
-                            copiedId === file._id ? "text-green-500" : "text-gray-400"
+                          onClick={() => copyLink(file)}
+                          className={`p-2 rounded transition-all duration-200 
+                          ${
+                            copiedId === file._id
+                              ? "bg-green-600 scale-110"
+                              : "bg-gray-800 hover:bg-gray-700 hover:scale-110"
                           }`}
                         >
-                          <Copy size={16} />
+                          <Share size={16} />
                         </button>
                       )}
 
                       <button
-                        onClick={() => handleDownload(file)}
-                        disabled={downloadingId === file._id}
-                        className="px-3 py-2 rounded bg-gray-800 hover:bg-gray-700"
+                        onClick={() => downloadFile(file)}
+                        className="p-2 bg-gray-800 hover:bg-gray-700 hover:scale-110 transition rounded"
                       >
                         <Download size={16} />
                       </button>
 
                       <button
-                        onClick={() => setDeleteConfirm(file._id)}
-                        className="px-3 py-2 rounded bg-gray-800 hover:bg-gray-700 text-red-400"
+                        onClick={() => removeOne(file)}
+                        className="p-2 bg-gray-800 hover:bg-red-600/20 hover:scale-110 transition rounded text-red-400"
                       >
                         <Trash2 size={16} />
                       </button>
+
                     </div>
                   </td>
                 </tr>
-              )) : (
-                <tr>
-                  <td colSpan="5" className="py-6 text-center text-gray-400">
-                    No files uploaded yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Cards */}
-        <div className="md:hidden space-y-3">
-  {filesList.length ? (
-    filesList.map(file => (
-      <FileCard
-        key={file._id}
-        file={file}
-        loadingId={loadingId}
-        downloadingId={downloadingId}
-        copiedId={copiedId}
-        onToggleAccess={handleToggleAccess}
-        onCopy={copyPublicUrl}
-        onDownload={handleDownload}
-        onDelete={(file) => setDeleteConfirm(file._id)}
-      />
-    ))
-  ) : (
-    <div className="text-center text-gray-400 py-6">
-      No files uploaded yet
-    </div>
-  )}
-</div>
-
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="py-6 text-center text-gray-400">
+                  No files uploaded yet
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold text-white mb-2">Delete File?</h3>
-            <p className="text-gray-400 mb-6">
-              Are you sure you want to delete{" "}
-              <strong>{filesList.find(f => f._id === deleteConfirm)?.originalName}</strong>?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() =>
-                  handleDeleteFile(filesList.find(f => f._id === deleteConfirm))
-                }
-                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 };
 
