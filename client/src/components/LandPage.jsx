@@ -82,30 +82,10 @@ const LandPage = () => {
             </Link>
           </div>
 
-          <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          
         </div>
 
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-white/[0.06] bg-black/60 backdrop-blur-2xl"
-            >
-              <div className="px-6 py-4 flex flex-col gap-4 text-sm">
-                {["Features", "Pricing", "Docs", "Blog"].map(l => (
-                  <a key={l} href="#" className="text-gray-400 hover:text-white transition">{l}</a>
-                ))}
-                <Link to="/register" className="text-center py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 font-semibold">
-                  Get Started
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+         
       </nav>
 
       {/* HERO */}
